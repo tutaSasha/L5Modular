@@ -3,12 +3,12 @@
 namespace ArtemSchander\L5Modular;
 
 use Illuminate\Filesystem\Filesystem;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
 class ModuleServiceProvider extends ServiceProvider
 {
     protected $files;
-
     /**
      * Bootstrap the application services.
      *
@@ -21,15 +21,20 @@ class ModuleServiceProvider extends ServiceProvider
             foreach ($modules as $module) {
                 // Allow routes to be cached
                 if (!$this->app->routesAreCached()) {
-                    $route_files = [
-                        app_path() . '/Modules/' . $module . '/routes.php',
-                        app_path() . '/Modules/' . $module . '/routes/web.php',
-                        app_path() . '/Modules/' . $module . '/routes/api.php',
-                    ];
-                    foreach ($route_files as $route_file) {
-                        if ($this->files->exists($route_file)) {
-                            include $route_file;
-                        }
+                    if ($this->files->exists(app_path() . '/Modules/' . $module . '/routes/api.php')) {
+                        Route::middleware('api')
+                            ->namespace("App\Modules\\".$module.'\\Controllers')
+                            ->group(app_path() . '/Modules/' . $module . '/routes/api.php');
+                    }
+                    if ($this->files->exists(app_path() . '/Modules/' . $module . '/routes/web.php')) {
+                        Route::middleware('web')
+                            ->namespace("App\Modules\\".$module.'\\Controllers')
+                            ->group(app_path() . '/Modules/' . $module . '/routes/web.php');
+                    }
+                    if ($this->files->exists(app_path() . '/Modules/' . $module . '/routes.php')) {
+                        Route::middleware('web')
+                            ->namespace("App\Modules\\".$module.'\\Controllers')
+                            ->group(app_path() . '/Modules/' . $module . '/routes.php');
                     }
                 }
                 $helper = app_path().'/Modules/'.$module.'/helper.php';
@@ -49,11 +54,6 @@ class ModuleServiceProvider extends ServiceProvider
         }
     }
 
-    /**
-     * Register the application services.
-     *
-     * @return void
-     */
     public function register()
     {
         $this->files = new Filesystem;
